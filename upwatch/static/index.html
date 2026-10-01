@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>upwatch</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%230ca30c'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --surface-2: #f2f1ed;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --accent: #2a78d6;
+    --series: #2a78d6;
+    --good: #0ca30c;
+    --good-text: #006300;
+    --critical: #d03b3b;
+    --warning: #fab219;
+    --warning-text: #8a5a00;
+    --unknown: #898781;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 16px rgba(0, 0, 0, .04);
+    --mono: ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --surface-2: #232321;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --accent: #3987e5;
+      --series: #3987e5;
+      --good-text: #0ca30c;
+      --critical: #e05555;
+      --warning-text: #fab219;
+      --shadow: none;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; letter-spacing: -.01em; }
+  .brand .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent); }
+  .brand small { font: 12px var(--mono); color: var(--muted); font-weight: 400; }
+  .meta { margin-left: auto; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+
+  .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .tile .label { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
+  .tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+  form.add { display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px; padding: 12px; margin-bottom: 16px; }
+  input {
+    width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--page); color: var(--ink); font: inherit;
+  }
+  input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--ink); padding: 7px 12px; white-space: nowrap;
+  }
+  button:hover { background: var(--surface-2); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 9px 16px; }
+  button.primary:hover { filter: brightness(1.08); }
+  button.danger { color: var(--critical); }
+  button.confirm { background: var(--critical); border-color: var(--critical); color: #fff; }
+  button:disabled { opacity: .55; cursor: default; }
+  .form-error { grid-column: 1 / -1; color: var(--critical); font-size: 13px; margin: 0; }
+  .form-error:empty { display: none; }
+
+  .list-head, .row {
+    display: grid; align-items: center; gap: 12px;
+    grid-template-columns: 116px minmax(0, 1.6fr) 104px 84px 72px minmax(0, 1.1fr) 250px;
+    padding: 10px 14px;
+  }
+  .list-head { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+  .row + .row { border-top: 1px solid var(--border); }
+  .row.paused > :not(.actions):not(.status-cell) { opacity: .55; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; }
+  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .url { display: block; color: var(--ink-2); font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+  .url:hover { color: var(--accent); text-decoration: underline; }
+  .err { color: var(--critical); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .actions { display: flex; gap: 6px; justify-content: flex-end; }
+  .actions button { padding: 5px 9px; font-size: 13px; }
+  .empty { padding: 40px 16px; text-align: center; color: var(--ink-2); }
+  .empty code { font-family: var(--mono); background: var(--surface-2); padding: 2px 6px; border-radius: 4px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+  .badge svg { flex: none; }
+  .badge.up { color: var(--good-text); }
+  .badge.down { color: var(--critical); }
+  .badge.unknown { color: var(--ink-2); }
+  .badge.paused { color: var(--warning-text); }
+  .sub { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 1px; }
+
+  .strip { display: flex; gap: 2px; align-items: stretch; height: 22px; }
+  .strip i { flex: 1 1 0; min-width: 3px; max-width: 8px; border-radius: 2px; background: var(--grid); }
+  .strip i.up { background: var(--good); }
+  .strip i.down { background: var(--critical); }
+
+  dialog {
+    width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+    border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--ink);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, .45); }
+  .dlg-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .dlg-head h2 { margin: 0; font-size: 17px; }
+  .dlg-head .close { margin-left: auto; }
+  .dlg-body { padding: 16px 18px 20px; overflow: auto; max-height: calc(100vh - 140px); }
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stats div { font-size: 12px; color: var(--ink-2); }
+  .stats b { display: block; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .chart-title { font-size: 12px; color: var(--ink-2); margin: 4px 0 6px; }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 2; transform: translate(-50%, -100%);
+    background: var(--ink); color: var(--page); font-size: 12px; padding: 6px 8px; border-radius: 6px;
+    white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+  }
+  .tooltip[hidden] { display: none; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin: 8px 0 16px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; top: -16px; background: var(--surface); }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td.mono { font-family: var(--mono); font-size: 12px; }
+  footer { margin-top: 20px; color: var(--muted); font-size: 12px; text-align: center; }
+  footer a { color: inherit; }
+
+  @media (max-width: 860px) {
+    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    form.add { grid-template-columns: 1fr; }
+    .list-head { display: none; }
+    .row { grid-template-columns: 1fr auto; grid-template-areas: "site status" "meta meta" "strip strip" "actions actions"; row-gap: 8px; }
+    .row .site { grid-area: site; } .row .status-cell { grid-area: status; }
+    .row .strip { grid-area: strip; } .row .actions { grid-area: actions; justify-content: flex-start; flex-wrap: wrap; }
+    .row .c-last, .row .c-resp, .row .c-up { display: none; }
+    .row .meta-line { grid-area: meta; display: block !important; color: var(--ink-2); font-size: 12px; }
+    .meta { margin-left: 0; width: 100%; }
+  }
+  .meta-line { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="pulse" aria-hidden="true"></span>upwatch <small id="version"></small></div>
+    <div class="meta" id="meta">connecting…</div>
+  </header>
+
+  <section class="summary" aria-label="Summary">
+    <div class="tile"><div class="label" data-icon="up">Up</div><div class="value" id="n-up">–</div></div>
+    <div class="tile"><div class="label" data-icon="down">Down</div><div class="value" id="n-down">–</div></div>
+    <div class="tile"><div class="label" data-icon="unknown">Unknown</div><div class="value" id="n-unknown">–</div></div>
+    <div class="tile"><div class="label" data-icon="paused">Paused</div><div class="value" id="n-paused">–</div></div>
+  </section>
+
+  <form class="add card" id="add-form" autocomplete="off">
+    <input id="add-name" name="name" placeholder="Friendly name (optional)" aria-label="Friendly name" maxlength="100">
+    <input id="add-url" name="url" placeholder="https://example.com" aria-label="URL" required>
+    <button class="primary" type="submit">Add monitor</button>
+    <p class="form-error" id="add-error" role="alert"></p>
+  </form>
+
+  <section class="card" aria-label="Monitors">
+    <div class="list-head">
+      <span>Status</span><span>Site</span><span>Last check</span><span class="num">Response</span><span class="num">Uptime</span><span>Recent checks</span><span></span>
+    </div>
+    <div id="rows"></div>
+  </section>
+
+  <footer>Status refreshes every few seconds · history keeps the latest <span id="keep">100</span> checks per site · <a href="https://github.com/jayspyroyale/upwatch" target="_blank" rel="noopener">upwatch on GitHub</a></footer>
+</div>
+
+<dialog id="history" aria-labelledby="h-title">
+  <div class="dlg-head">
+    <div>
+      <h2 id="h-title"></h2>
+      <a class="url" id="h-url" target="_blank" rel="noopener"></a>
+    </div>
+    <button class="close" type="button" id="h-close" aria-label="Close">Close</button>
+  </div>
+  <div class="dlg-body">
+    <div class="stats" id="h-stats"></div>
+    <div class="chart-title">Response time per check (oldest → newest)</div>
+    <div class="chart" id="h-chart"><div class="tooltip" hidden></div></div>
+    <div class="legend">
+      <span><i style="background:var(--series)"></i>Response time (Up)</span>
+      <span><i style="background:var(--critical)"></i>Down</span>
+    </div>
+    <table>
+      <thead><tr><th>Checked at</th><th>Status</th><th>HTTP</th><th style="text-align:right">Response</th><th>Detail</th></tr></thead>
+      <tbody id="h-rows"></tbody>
+    </table>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const $ = (sel) => document.querySelector(sel);
+const ICONS = {
+  up: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--good)"/><path d="M4.6 8.2l2.2 2.2 4.6-4.7" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  down: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--critical)"/><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  unknown: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="var(--unknown)" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>',
+  paused: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--warning)"/><path d="M6.3 5.2v5.6M9.7 5.2v5.6" stroke="#3d2a00" stroke-width="1.8" stroke-linecap="round"/></svg>',
+};
+const LABELS = { up: "Up", down: "Down", unknown: "Unknown", paused: "Paused" };
+document.querySelectorAll("[data-icon]").forEach((el) => el.insertAdjacentHTML("afterbegin", ICONS[el.dataset.icon]));
+
+let monitors = [];
+let info = null;
+let openId = null;
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function ago(ts) {
+  if (!ts) return "never";
+  const s = Math.max(0, Math.round(Date.now() / 1000 - ts));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+const fmtTime = (ts) => new Date(ts * 1000).toLocaleString();
+const fmtMs = (v) => (v == null ? "–" : `${v.toLocaleString()} ms`);
+function every(seconds) {
+  if (seconds % 3600 === 0) return `${seconds / 3600}h`;
+  if (seconds % 60 === 0) return `${seconds / 60} min`;
+  return `${seconds}s`;
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: { "Content-Type": "application/json", "X-Upwatch": "1", ...(options.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+function badge(state, sub) {
+  return `<span class="badge ${state}">${ICONS[state]}<span>${LABELS[state]}${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</span></span>`;
+}
+
+function strip(recent) {
+  const cells = recent.map((c) =>
+    `<i class="${c.status}" title="${esc(fmtTime(c.checked_at))} · ${c.status === "up" ? "Up · " + fmtMs(c.response_ms) : "Down · " + esc(c.error || "")}"></i>`);
+  for (let i = cells.length; i < 30; i++) cells.unshift("<i></i>");
+  return `<div class="strip" role="img" aria-label="Last ${recent.length} checks: ${recent.filter((c) => c.status === "up").length} up, ${recent.filter((c) => c.status === "down").length} down">${cells.join("")}</div>`;
+}
+
+function render() {
+  const counts = { up: 0, down: 0, unknown: 0, paused: 0 };
+  monitors.forEach((m) => (m.paused ? counts.paused++ : counts[m.status]++));
+  Object.entries(counts).forEach(([k, v]) => ($(`#n-${k}`).textContent = v));
+  document.title = counts.down ? `(${counts.down} down) upwatch` : "upwatch";
+
+  const rows = $("#rows");
+  if (!monitors.length) {
+    rows.innerHTML = `<div class="empty">No monitors yet. Add a URL above, or from a terminal run<br><br><code>upwatch add https://example.com --name Example</code></div>`;
+    return;
+  }
+  rows.innerHTML = monitors.map((m) => {
+    const last = m.last_check;
+    const state = m.paused ? "paused" : m.status;
+    const sub = m.paused ? `last: ${LABELS[m.status]}` : last && last.status_code ? `HTTP ${last.status_code}` : "";
+    return `<div class="row ${m.paused ? "paused" : ""}" data-id="${m.id}">
+      <div class="status-cell">${badge(state, sub)}</div>
+      <div class="site">
+        <div class="name" title="${esc(m.name)}">${esc(m.name)}</div>
+        <a class="url" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer" title="${esc(m.url)}">${esc(m.url)}</a>
+        ${last && last.error ? `<div class="err" title="${esc(last.error)}">${esc(last.error)}</div>` : ""}
+      </div>
+      <div class="c-last" title="${last ? esc(fmtTime(last.checked_at)) : ""}">${last ? ago(last.checked_at) : "never"}</div>
+      <div class="c-resp num">${last ? fmtMs(last.response_ms) : "–"}</div>
+      <div class="c-up num">${m.uptime_pct == null ? "–" : m.uptime_pct + "%"}</div>
+      <div class="meta-line">${last ? ago(last.checked_at) : "never checked"} · ${last ? fmtMs(last.response_ms) : "–"} · ${m.uptime_pct == null ? "–" : m.uptime_pct + "% up"}</div>
+      ${strip(m.recent)}
+      <div class="actions">
+        <button type="button" data-act="history">History</button>
+        <button type="button" data-act="check" ${m.paused ? "disabled" : ""} title="Check now">Check</button>
+        <button type="button" data-act="${m.paused ? "resume" : "pause"}">${m.paused ? "Resume" : "Pause"}</button>
+        <button type="button" data-act="remove" class="danger">Remove</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function refresh() {
+  try {
+    monitors = await api("/api/monitors");
+    render();
+    if (info) $("#meta").textContent = `checks every ${every(info.interval)} · timeout ${info.timeout}s · updated ${new Date().toLocaleTimeString()}`;
+    if (openId != null && $("#history").open) loadHistory(openId, false);
+  } catch (err) {
+    $("#meta").textContent = "Can't reach upwatch. Is `upwatch serve` still running?";
+  }
+}
+
+$("#add-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter || $("#add-form button");
+  $("#add-error").textContent = "";
+  button.disabled = true;
+  try {
+    await api("/api/monitors", { method: "POST", body: JSON.stringify({ name: $("#add-name").value, url: $("#add-url").value }) });
+    $("#add-form").reset();
+    await refresh();
+    setTimeout(refresh, 1500);
+  } catch (err) {
+    $("#add-error").textContent = err.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+const pendingRemove = new Map();
+$("#rows").addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-act]");
+  if (!button) return;
+  const id = Number(button.closest(".row").dataset.id);
+  const act = button.dataset.act;
+  try {
+    if (act === "history") return openHistory(id);
+    if (act === "remove") {
+      if (!pendingRemove.has(id)) {
+        button.textContent = "Confirm remove";
+        button.classList.add("confirm");
+        pendingRemove.set(id, setTimeout(() => { pendingRemove.delete(id); render(); }, 4000));
+        return;
+      }
+      clearTimeout(pendingRemove.get(id));
+      pendingRemove.delete(id);
+      await api(`/api/monitors/${id}`, { method: "DELETE" });
+    } else {
+      button.disabled = true;
+      await api(`/api/monitors/${id}/${act}`, { method: "POST" });
+      if (act === "check") setTimeout(refresh, 1500);
+    }
+    await refresh();
+  } catch (err) {
+    $("#meta").textContent = err.message;
+  }
+});
+
+// ---- history dialog -------------------------------------------------------
+async function openHistory(id) {
+  openId = id;
+  history.replaceState(null, "", `#history-${id}`);
+  $("#h-rows").innerHTML = "";
+  $("#h-stats").innerHTML = "";
+  if (!$("#history").open) $("#history").showModal();
+  await loadHistory(id, true);
+}
+$("#h-close").addEventListener("click", () => $("#history").close());
+$("#history").addEventListener("close", () => {
+  openId = null;
+  history.replaceState(null, "", location.pathname);
+});
+$("#history").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+
+async function loadHistory(id, first) {
+  try {
+    const [monitor, checks] = await Promise.all([api(`/api/monitors/${id}`), api(`/api/monitors/${id}/checks`)]);
+    if (openId !== id) return;
+    $("#h-title").textContent = monitor.name;
+    $("#h-url").textContent = monitor.url;
+    $("#h-url").href = monitor.url;
+    const state = monitor.paused ? "paused" : monitor.status;
+    const ups = checks.filter((c) => c.status === "up").map((c) => c.response_ms).filter((v) => v != null).sort((a, b) => a - b);
+    const p95 = ups.length ? ups[Math.min(ups.length - 1, Math.floor(ups.length * 0.95))] : null;
+    $("#h-stats").innerHTML = `
+      <div>Status<b>${badge(state)}</b></div>
+      <div>Uptime (stored checks)<b>${monitor.uptime_pct == null ? "–" : monitor.uptime_pct + "%"}</b></div>
+      <div>Avg response<b>${fmtMs(monitor.avg_ms)}</b></div>
+      <div>p95 response<b>${fmtMs(p95)}</b></div>
+      <div>Checks stored<b>${checks.length} / ${info ? info.history_limit : 100}</b></div>`;
+    drawChart(checks.slice().reverse());
+    $("#h-rows").innerHTML = checks.length ? checks.map((c) => `<tr>
+        <td>${esc(fmtTime(c.checked_at))}</td>
+        <td>${badge(c.status)}</td>
+        <td class="mono">${c.status_code ?? "–"}</td>
+        <td class="num">${fmtMs(c.response_ms)}</td>
+        <td>${c.error ? `<span class="err" style="white-space:normal">${esc(c.error)}</span>` : ""}</td>
+      </tr>`).join("") : `<tr><td colspan="5" class="empty">No checks yet — the first one runs a few seconds after you add a site.</td></tr>`;
+  } catch (err) {
+    if (first) $("#h-stats").textContent = err.message;
+  }
+}
+
+function niceMax(v) {
+  if (v <= 0) return 100;
+  const pow = 10 ** Math.floor(Math.log10(v));
+  for (const m of [1, 2, 2.5, 5, 10]) if (m * pow >= v) return m * pow;
+  return 10 * pow;
+}
+
+function drawChart(checks) {
+  const host = $("#h-chart");
+  const tip = host.querySelector(".tooltip");
+  host.querySelectorAll("svg").forEach((s) => s.remove());
+  const W = 860, H = 200, L = 52, R = 8, T = 10, B = 22;
+  const plotW = W - L - R, plotH = H - T - B;
+  const n = Math.max(checks.length, 1);
+  const max = niceMax(Math.max(0, ...checks.map((c) => (c.status === "up" ? c.response_ms || 0 : 0))));
+  const slot = plotW / Math.max(n, 20);
+  const gap = slot > 6 ? 2 : 1;
+  const barW = Math.max(1.5, slot - gap);
+  const y = (v) => T + plotH - (v / max) * plotH;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Response time for the last ${checks.length} checks. Full data in the table below.">`;
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, yy = y(v);
+    svg += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${i === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/>`;
+    svg += `<text x="${L - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${Math.round(v).toLocaleString()} ms</text>`;
+  }
+  checks.forEach((c, i) => {
+    const x = L + i * slot + gap / 2;
+    if (c.status === "up") {
+      const h = Math.max(2, plotH - (y(c.response_ms || 0) - T));
+      const top = T + plotH - h, r = Math.min(4, barW / 2, h);
+      svg += `<path d="M${x},${T + plotH} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${T + plotH} Z" fill="var(--series)"/>`;
+    } else {
+      svg += `<rect x="${x}" y="${T}" width="${barW}" height="${plotH}" fill="var(--critical)" opacity=".14"/>`;
+      svg += `<rect x="${x}" y="${T + plotH - 6}" width="${barW}" height="6" rx="1.5" fill="var(--critical)"/>`;
+    }
+    svg += `<rect class="hit" data-i="${i}" x="${L + i * slot}" y="${T}" width="${slot}" height="${plotH}" fill="transparent"/>`;
+  });
+  if (checks.length) {
+    svg += `<text x="${L}" y="${H - 4}" font-size="11" fill="var(--muted)">${esc(new Date(checks[0].checked_at * 1000).toLocaleTimeString())}</text>`;
+    svg += `<text x="${L + (checks.length - 1) * slot + slot}" y="${H - 4}" font-size="11" text-anchor="end" fill="var(--muted)">${esc(new Date(checks[checks.length - 1].checked_at * 1000).toLocaleTimeString())}</text>`;
+  } else {
+    svg += `<text x="${L + plotW / 2}" y="${T + plotH / 2}" text-anchor="middle" font-size="13" fill="var(--muted)">No checks yet</text>`;
+  }
+  svg += "</svg>";
+  host.insertAdjacentHTML("afterbegin", svg);
+
+  const el = host.querySelector("svg");
+  el.addEventListener("mousemove", (e) => {
+    const hit = e.target.closest(".hit");
+    if (!hit) { tip.hidden = true; return; }
+    const c = checks[Number(hit.dataset.i)];
+    tip.innerHTML = `<b>${c.status === "up" ? "Up" : "Down"}</b> · ${c.status === "up" ? fmtMs(c.response_ms) : esc(c.error || "")}<br>${esc(fmtTime(c.checked_at))}`;
+    const box = host.getBoundingClientRect();
+    tip.style.left = `${Math.min(Math.max(e.clientX - box.left, 80), box.width - 80)}px`;
+    tip.style.top = `${e.clientY - box.top - 10}px`;
+    tip.hidden = false;
+  });
+  el.addEventListener("mouseleave", () => (tip.hidden = true));
+}
+
+(async () => {
+  try {
+    info = await api("/api/info");
+    $("#version").textContent = `v${info.version}`;
+    $("#keep").textContent = info.history_limit;
+  } catch (_) { /* refresh() reports connection problems */ }
+  await refresh();
+  const linked = location.hash.match(/^#history-(\d+)$/);
+  if (linked) openHistory(Number(linked[1]));
+  setInterval(() => { if (!pendingRemove.size) refresh(); }, 5000);
+})();
+</script>
+</body>
+</html>
