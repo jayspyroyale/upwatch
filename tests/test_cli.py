@@ -51,6 +51,13 @@ class CliTests(unittest.TestCase):
             code, out = self.run_cli("history", "broken", "--json")
             self.assertEqual(json.loads(out)[0]["status_code"], 500)
 
+    def test_serve_rejects_out_of_range_interval(self):
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as ctx:
+            cli.build_parser().parse_args(["serve", "--interval", "5"])
+        self.assertEqual(ctx.exception.code, 2)
+        args = cli.build_parser().parse_args(["serve"])
+        self.assertIsNone(args.interval)  # None means "use the saved interval"
+
     def test_no_console_does_not_crash(self):
         with mock.patch.object(sys, "stdout", None):
             self.assertFalse(cli._use_color())

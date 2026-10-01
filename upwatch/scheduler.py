@@ -9,11 +9,35 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Callable
 
 from upwatch.checker import DEFAULT_TIMEOUT, CheckResult, check_url
-from upwatch.store import Check, Monitor, Store
+from upwatch.store import Check, Monitor, Store, ValidationError
 
 DEFAULT_INTERVAL = 300  # five minutes
+MIN_INTERVAL = 10
+MAX_INTERVAL = 86400  # one day
+INTERVAL_SETTING = "interval"
 
 log = logging.getLogger("upwatch")
+
+
+def validate_interval(value) -> int:
+    """Return `value` as whole seconds, or raise ValidationError."""
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        raise ValidationError("Interval must be a number of seconds.")
+    if seconds != seconds or not MIN_INTERVAL <= seconds <= MAX_INTERVAL:  # NaN fails too
+        raise ValidationError(
+            f"Interval must be between {MIN_INTERVAL} seconds and {MAX_INTERVAL // 3600} hours."
+        )
+    return round(seconds)
+
+
+def saved_interval(store: Store) -> int:
+    """The interval chosen in the dashboard (or via --interval), else the default."""
+    try:
+        return validate_interval(store.get_setting(INTERVAL_SETTING))
+    except ValidationError:
+        return DEFAULT_INTERVAL
 
 
 def run_check(store: Store, monitor: Monitor, timeout: float = DEFAULT_TIMEOUT,
@@ -59,6 +83,14 @@ class Scheduler:
         if self._thread:
             self._thread.join(timeout=5)
         self._pool.shutdown(wait=False, cancel_futures=True)
+
+    def set_interval(self, value) -> int:
+        """Change the interval immediately and remember it for the next start."""
+        seconds = validate_interval(value)
+        self.store.set_setting(INTERVAL_SETTING, seconds)
+        self.interval = seconds
+        log.info("Check interval set to %ss", seconds)
+        return seconds
 
     def check_now(self, monitor: Monitor) -> bool:
         """Queue an immediate check. Returns False if one is already running."""

@@ -81,6 +81,26 @@ class ServerTests(unittest.TestCase):
         status, _ = self.request("GET", f"/api/monitors/{mid}")
         self.assertEqual(status, 404)
 
+    def test_change_interval(self):
+        status, info = self.request("GET", "/api/info")
+        self.assertEqual((info["interval"], info["interval_min"]), (300, 10))
+
+        status, info = self.request("POST", "/api/settings", {"interval": 60})
+        self.assertEqual((status, info["interval"]), (200, 60))
+        self.assertEqual(self.scheduler.interval, 60)
+        self.assertEqual(self.store.get_setting("interval"), "60")
+
+        status, body = self.request("POST", "/api/settings", {"interval": 5})
+        self.assertEqual(status, 400)
+        self.assertIn("between", body["error"])
+        status, _ = self.request("POST", "/api/settings", {"interval": 120}, headers={"X-Upwatch": ""})
+        self.assertEqual(status, 403)
+        self.assertEqual(self.scheduler.interval, 60)
+
+    def test_port_already_in_use_is_an_error(self):
+        with self.assertRaises(OSError):
+            DashboardServer(("127.0.0.1", self.port), self.store, self.scheduler)
+
     def test_invalid_url_rejected(self):
         status, body = self.request("POST", "/api/monitors", {"url": "ftp://example.com"})
         self.assertEqual(status, 400)

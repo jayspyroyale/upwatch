@@ -61,7 +61,22 @@
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; letter-spacing: -.01em; }
   .brand .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent); }
   .brand small { font: 12px var(--mono); color: var(--muted); font-weight: 400; }
-  .meta { margin-left: auto; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  .controls { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .meta { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  .interval { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; font-size: 13px; color: var(--ink-2); }
+  .interval select, .interval input {
+    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 8px;
+  }
+  .interval select { cursor: pointer; padding-right: 4px; }
+  .interval input { width: 88px; }
+  .interval .custom { display: inline-flex; align-items: center; gap: 6px; }
+  .interval .custom[hidden] { display: none; }
+  .interval .custom button { padding: 5px 10px; }
+  .interval select:focus-visible, .interval input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .saved { font-size: 12px; color: var(--good-text); min-width: 0; }
+  .saved.error { color: var(--critical); }
+  .saved:empty { display: none; }
 
   .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
   .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
@@ -69,7 +84,7 @@
   .tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
 
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
-  form.add { display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px; padding: 12px; margin-bottom: 16px; }
+  form.add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; padding: 12px; margin-bottom: 16px; }
   input {
     width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--page); color: var(--ink); font: inherit;
@@ -152,14 +167,15 @@
 
   @media (max-width: 860px) {
     .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    form.add { grid-template-columns: 1fr; }
+    form.add { grid-template-columns: minmax(0, 1fr); }
     .list-head { display: none; }
-    .row { grid-template-columns: 1fr auto; grid-template-areas: "site status" "meta meta" "strip strip" "actions actions"; row-gap: 8px; }
+    .row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "site status" "meta meta" "strip strip" "actions actions"; row-gap: 8px; }
     .row .site { grid-area: site; } .row .status-cell { grid-area: status; }
     .row .strip { grid-area: strip; } .row .actions { grid-area: actions; justify-content: flex-start; flex-wrap: wrap; }
     .row .c-last, .row .c-resp, .row .c-up { display: none; }
     .row .meta-line { grid-area: meta; display: block !important; color: var(--ink-2); font-size: 12px; }
-    .meta { margin-left: 0; width: 100%; }
+    .controls { margin-left: 0; width: 100%; align-items: flex-start; }
+    .interval { justify-content: flex-start; }
   }
   .meta-line { display: none; }
 </style>
@@ -168,7 +184,19 @@
 <div class="wrap">
   <header>
     <div class="brand"><span class="pulse" aria-hidden="true"></span>upwatch <small id="version"></small></div>
-    <div class="meta" id="meta">connecting…</div>
+    <div class="controls">
+      <form class="interval" id="interval-form" autocomplete="off" novalidate>
+        <label for="interval">Check every</label>
+        <select id="interval" disabled></select>
+        <span class="custom" id="custom" hidden>
+          <input id="custom-seconds" type="number" inputmode="numeric" step="1" aria-label="Custom interval in seconds">
+          <span>sec</span>
+          <button type="submit">Save</button>
+        </span>
+        <span class="saved" id="interval-msg" role="status"></span>
+      </form>
+      <div class="meta" id="meta">connecting…</div>
+    </div>
   </header>
 
   <section class="summary" aria-label="Summary">
@@ -247,11 +275,6 @@ function ago(ts) {
 }
 const fmtTime = (ts) => new Date(ts * 1000).toLocaleString();
 const fmtMs = (v) => (v == null ? "–" : `${v.toLocaleString()} ms`);
-function every(seconds) {
-  if (seconds % 3600 === 0) return `${seconds / 3600}h`;
-  if (seconds % 60 === 0) return `${seconds / 60} min`;
-  return `${seconds}s`;
-}
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -313,9 +336,18 @@ function render() {
 
 async function refresh() {
   try {
-    monitors = await api("/api/monitors");
+    const [list, latest] = await Promise.all([api("/api/monitors"), api("/api/info")]);
+    monitors = list;
+    // Pick up interval changes made elsewhere, unless the user is editing it right now.
+    const editing = !$("#custom").hidden || document.activeElement === $("#interval");
+    if (!info || (latest.interval !== info.interval && !editing)) {
+      info = latest;
+      renderInterval();
+    } else {
+      info = { ...latest, interval: info.interval };
+    }
     render();
-    if (info) $("#meta").textContent = `checks every ${every(info.interval)} · timeout ${info.timeout}s · updated ${new Date().toLocaleTimeString()}`;
+    if (info) $("#meta").textContent = `timeout ${info.timeout}s · updated ${new Date().toLocaleTimeString()}`;
     if (openId != null && $("#history").open) loadHistory(openId, false);
   } catch (err) {
     $("#meta").textContent = "Can't reach upwatch. Is `upwatch serve` still running?";
@@ -366,6 +398,77 @@ $("#rows").addEventListener("click", async (event) => {
   } catch (err) {
     $("#meta").textContent = err.message;
   }
+});
+
+// ---- check interval -------------------------------------------------------
+const PRESETS = [60, 120, 300, 600, 900, 1800, 3600, 21600, 86400];
+const CUSTOM = "custom";
+let msgTimer = null;
+
+function intervalLabel(seconds) {
+  if (seconds % 3600 === 0) return seconds === 3600 ? "1 hour" : `${seconds / 3600} hours`;
+  if (seconds % 60 === 0) return seconds === 60 ? "1 minute" : `${seconds / 60} minutes`;
+  return `${seconds} seconds`;
+}
+
+function renderInterval() {
+  const select = $("#interval");
+  const current = info.interval;
+  const values = PRESETS.includes(current) ? PRESETS : [...PRESETS, current].sort((a, b) => a - b);
+  select.innerHTML = values.map((s) => `<option value="${s}">${intervalLabel(s)}</option>`).join("")
+    + `<option value="${CUSTOM}">Custom…</option>`;
+  select.value = String(current);
+  select.disabled = false;
+  $("#custom").hidden = true;
+  const input = $("#custom-seconds");
+  input.min = info.interval_min;
+  input.max = info.interval_max;
+}
+
+function intervalMessage(text, isError) {
+  const msg = $("#interval-msg");
+  msg.textContent = text;
+  msg.classList.toggle("error", !!isError);
+  clearTimeout(msgTimer);
+  msgTimer = setTimeout(() => (msg.textContent = ""), isError ? 6000 : 2500);
+}
+
+async function saveInterval(seconds) {
+  const select = $("#interval");
+  select.disabled = true;
+  try {
+    info = await api("/api/settings", { method: "POST", body: JSON.stringify({ interval: seconds }) });
+    renderInterval();
+    intervalMessage("Saved");
+    refresh();
+  } catch (err) {
+    select.disabled = false;
+    intervalMessage(err.message, true);
+  }
+}
+
+$("#interval").addEventListener("change", (event) => {
+  if (event.target.value === CUSTOM) {
+    $("#custom").hidden = false;
+    $("#custom-seconds").value = info.interval;
+    $("#custom-seconds").focus();
+    return;
+  }
+  saveInterval(Number(event.target.value));
+});
+
+$("#interval-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const value = Number($("#custom-seconds").value);
+  if (!Number.isFinite(value) || value < info.interval_min || value > info.interval_max) {
+    intervalMessage(`Use ${info.interval_min} seconds to ${intervalLabel(info.interval_max)}`, true);
+    return;
+  }
+  saveInterval(Math.round(value));
+});
+
+$("#custom-seconds").addEventListener("keydown", (event) => {
+  if (event.key === "Escape") renderInterval();
 });
 
 // ---- history dialog -------------------------------------------------------
@@ -478,6 +581,7 @@ function drawChart(checks) {
     info = await api("/api/info");
     $("#version").textContent = `v${info.version}`;
     $("#keep").textContent = info.history_limit;
+    renderInterval();
   } catch (_) { /* refresh() reports connection problems */ }
   await refresh();
   const linked = location.hash.match(/^#history-(\d+)$/);

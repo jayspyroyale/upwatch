@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import socket
 from http import HTTPStatus
@@ -12,7 +13,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from upwatch import __version__
-from upwatch.scheduler import Scheduler
+from upwatch.scheduler import MAX_INTERVAL, MIN_INTERVAL, Scheduler
 from upwatch.store import HISTORY_LIMIT, Monitor, Store, ValidationError
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -98,6 +99,18 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def _info(self) -> dict:
+        sched = self.server.scheduler
+        return {
+            "version": __version__,
+            "interval": sched.interval,
+            "interval_min": MIN_INTERVAL,
+            "interval_max": MAX_INTERVAL,
+            "timeout": sched.timeout,
+            "history_limit": HISTORY_LIMIT,
+            "db_path": str(self.server.store.path),
+        }
+
     # -- routes -----------------------------------------------------------
 
     def do_GET(self) -> None:
@@ -120,14 +133,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if url.path == "/api/info":
-            sched = self.server.scheduler
-            self._send_json({
-                "version": __version__,
-                "interval": sched.interval,
-                "timeout": sched.timeout,
-                "history_limit": HISTORY_LIMIT,
-                "db_path": str(store.path),
-            })
+            self._send_json(self._info())
             return
 
         if url.path == "/api/monitors":
@@ -163,6 +169,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.server.scheduler.check_now(monitor)
                 return self._send_json(monitor_summary(store, monitor), HTTPStatus.CREATED)
 
+            if path == "/api/settings":
+                data = self._read_json()
+                if "interval" in data:
+                    self.server.scheduler.set_interval(data["interval"])
+                return self._send_json(self._info())
+
             match = MONITOR_PATH.match(path)
             if match and match.group(2) in ("pause", "resume", "check"):
                 monitor = store.get_monitor(int(match.group(1)))
@@ -191,6 +203,9 @@ class Handler(BaseHTTPRequestHandler):
 
 class DashboardServer(ThreadingHTTPServer):
     daemon_threads = True
+    # On Windows SO_REUSEADDR lets a second server bind a port that is already
+    # in use, so a forgotten `upwatch serve` would silently keep answering.
+    allow_reuse_address = os.name != "nt"
 
     def __init__(self, address: tuple[str, int], store: Store, scheduler: Scheduler):
         if ":" in address[0]:

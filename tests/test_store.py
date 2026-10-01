@@ -67,6 +67,14 @@ class StoreTests(unittest.TestCase):
         self.store.set_paused(a.id, False)
         self.assertEqual(len(self.store.list_monitors(active_only=True)), 2)
 
+    def test_settings_round_trip(self):
+        self.assertIsNone(self.store.get_setting("interval"))
+        self.store.set_setting("interval", 60)
+        self.store.set_setting("interval", 120)
+        self.assertEqual(self.store.get_setting("interval"), "120")
+        reopened = Store(self.store.path)
+        self.assertEqual(reopened.get_setting("interval"), "120")
+
     def test_remove_deletes_history(self):
         monitor = self.store.add_monitor("https://example.com")
         self.store.record_check(monitor.id, "up", 200, 5)

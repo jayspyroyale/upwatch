@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS checks (
     error        TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_checks_monitor ON checks (monitor_id, id DESC);
+CREATE TABLE IF NOT EXISTS settings (
+    key    TEXT PRIMARY KEY,
+    value  TEXT NOT NULL
+);
 """
 
 
@@ -211,6 +215,21 @@ class Store:
                 (monitor_id, limit),
             ).fetchall()
             return [self._check_from_row(r) for r in rows]
+
+    # -- settings ---------------------------------------------------------
+
+    def get_setting(self, key: str) -> str | None:
+        with self._connect() as conn:
+            row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+            return row["value"] if row else None
+
+    def set_setting(self, key: str, value) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO settings (key, value) VALUES (?, ?)"
+                " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                (key, str(value)),
+            )
 
     # -- helpers ----------------------------------------------------------
 

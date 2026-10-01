@@ -5,8 +5,9 @@ import unittest
 from pathlib import Path
 
 from upwatch.checker import CheckResult
-from upwatch.scheduler import Scheduler
-from upwatch.store import Store
+from upwatch.scheduler import (DEFAULT_INTERVAL, INTERVAL_SETTING, Scheduler, saved_interval,
+                               validate_interval)
+from upwatch.store import Store, ValidationError
 
 
 class SchedulerTests(unittest.TestCase):
@@ -36,6 +37,31 @@ class SchedulerTests(unittest.TestCase):
         self.store.set_paused(paused.id, True)
         due = {m.id for m in sched.due(now)}
         self.assertEqual(due, {fresh.id, stale.id})
+
+    def test_validate_interval(self):
+        self.assertEqual(validate_interval("60"), 60)
+        self.assertEqual(validate_interval(90.4), 90)
+        for bad in (None, "abc", 0, 9, 86401, float("nan")):
+            with self.assertRaises(ValidationError):
+                validate_interval(bad)
+
+    def test_set_interval_applies_now_and_is_remembered(self):
+        self.assertEqual(saved_interval(self.store), DEFAULT_INTERVAL)
+        sched = Scheduler(self.store, interval=300, checker=self.fake_checker)
+        monitor = self.store.add_monitor("https://example.com")
+        now = time.time()
+        self.store.record_check(monitor.id, "up", 200, 1, checked_at=now - 90)
+        self.assertEqual(sched.due(now), [])
+        self.assertEqual(sched.set_interval(60), 60)
+        self.assertEqual([m.id for m in sched.due(now)], [monitor.id])
+        self.assertEqual(saved_interval(self.store), 60)
+        with self.assertRaises(ValidationError):
+            sched.set_interval(1)
+        self.assertEqual(sched.interval, 60)
+
+    def test_saved_interval_ignores_bad_values(self):
+        self.store.set_setting(INTERVAL_SETTING, "garbage")
+        self.assertEqual(saved_interval(self.store), DEFAULT_INTERVAL)
 
     def test_runs_new_monitor_once_per_interval(self):
         monitor = self.store.add_monitor("https://example.com")

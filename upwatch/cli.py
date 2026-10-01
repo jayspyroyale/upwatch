@@ -14,7 +14,8 @@ from datetime import datetime
 
 from upwatch import __version__
 from upwatch.checker import DEFAULT_TIMEOUT
-from upwatch.scheduler import DEFAULT_INTERVAL, Scheduler, run_check
+from upwatch.scheduler import (DEFAULT_INTERVAL, Scheduler, run_check, saved_interval,
+                               validate_interval)
 from upwatch.store import HISTORY_LIMIT, Monitor, Store, ValidationError
 
 DEFAULT_PORT = 8321
@@ -219,7 +220,9 @@ def cmd_serve(store: Store, args) -> int:
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
-    scheduler = Scheduler(store, interval=args.interval, timeout=args.timeout)
+    scheduler = Scheduler(store, interval=saved_interval(store), timeout=args.timeout)
+    if args.interval is not None:
+        scheduler.set_interval(args.interval)
     try:
         server = DashboardServer((args.host, args.port), store, scheduler)
     except OSError as exc:
@@ -229,7 +232,8 @@ def cmd_serve(store: Store, args) -> int:
     host = "localhost" if local_only or args.host in ("0.0.0.0", "::") else args.host
     url = f"http://{host}:{args.port}"
     print(f"{paint('upwatch', 'bold')} {__version__}  dashboard -> {paint(url, 'up')}")
-    print(paint(f"checking every {args.interval:g}s, timeout {args.timeout:g}s, "
+    print(paint(f"checking every {scheduler.interval}s (change it in the dashboard), "
+                f"timeout {args.timeout:g}s, "
                 f"database {store.path}", "dim"))
     if not local_only:
         print(paint("warning: the dashboard has no login; anyone who can reach this "
@@ -255,6 +259,13 @@ def positive(value: str) -> float:
     if number <= 0:
         raise argparse.ArgumentTypeError("must be greater than 0")
     return number
+
+
+def interval_arg(value: str) -> int:
+    try:
+        return validate_interval(value)
+    except ValidationError as exc:
+        raise argparse.ArgumentTypeError(str(exc))
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -300,8 +311,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="address to listen on (default 127.0.0.1, this computer only)")
     p.add_argument("-p", "--port", type=int, default=DEFAULT_PORT,
                    help=f"port (default {DEFAULT_PORT})")
-    p.add_argument("--interval", type=positive, default=DEFAULT_INTERVAL,
-                   help=f"seconds between checks of each URL (default {DEFAULT_INTERVAL})")
+    p.add_argument("--interval", type=interval_arg, default=None,
+                   help="seconds between checks of each URL; saved for next time "
+                        f"(default: last value used, else {DEFAULT_INTERVAL})")
     p.add_argument("--timeout", type=positive, default=DEFAULT_TIMEOUT,
                    help=f"seconds to wait for a response (default {DEFAULT_TIMEOUT:g})")
     p.add_argument("--open", action="store_true", help="open the dashboard in your browser")

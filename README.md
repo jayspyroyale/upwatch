@@ -39,7 +39,7 @@ You have a few websites, APIs or home-lab services and you just want to know: **
 - **Last check time and response time**, plus an uptime % and a strip of recent checks
 - **History** for each site: a response-time chart and a table of the last 100 checks
 - **Pause, resume or remove** monitors whenever you like
-- **Automatic checks every 5 minutes** (configurable), with a request timeout
+- **Automatic checks every 5 minutes**, changeable from a dropdown in the dashboard, with a request timeout
 - **Private by default:** the dashboard only listens on `localhost`
 - **Scriptable:** `--json` output and meaningful exit codes for cron jobs and CI
 - **Nothing to install but Python:** standard library only, works on Windows, macOS and Linux
@@ -66,7 +66,7 @@ Your browser opens **http://localhost:8321**. Leave the terminal window open; th
 
 **3. Add your sites**
 
-Type a name and a URL into the dashboard and press **Add monitor**. The first check runs within a few seconds, then every 5 minutes after that.
+Type a name and a URL into the dashboard and press **Add monitor**. The first check runs within a few seconds, then every 5 minutes after that. Want it more or less often? Use the **Check every** dropdown at the top right.
 
 That's it. 🎉 Press `Ctrl+C` in the terminal to stop. Your monitors and history are saved, and they'll pick up where they left off next time you run `upwatch serve`.
 
@@ -102,6 +102,8 @@ python -m upwatch serve --open
 | **Response** | How long the latest check took, in milliseconds |
 | **Uptime** | Share of the stored checks (up to 100) that were Up |
 | **Recent checks** | The last 30 checks, oldest → newest; hover any bar for details |
+
+**Check every** (top right) sets how often sites are checked: 1 minute up to 24 hours, or **Custom…** for any number of seconds from 10 to 86,400. The change applies immediately and is remembered next time you start upwatch.
 
 Each row has buttons to see **History**, **Check** right now, **Pause**/**Resume**, and **Remove** (click twice to confirm). The page refreshes itself every few seconds and follows your system's light/dark theme.
 
@@ -139,7 +141,7 @@ $ upwatch remove 4
 
 | Command | What it does |
 |---|---|
-| `upwatch serve` | Run the scheduler **and** the dashboard. Options: `--port 8321`, `--interval 300`, `--timeout 10`, `--host 127.0.0.1`, `--open`, `--verbose` |
+| `upwatch serve` | Run the scheduler **and** the dashboard. Options: `--port 8321`, `--interval SECONDS` (saved for next time), `--timeout 10`, `--host 127.0.0.1`, `--open`, `--verbose` |
 | `upwatch add URL [-n NAME]` | Add a site to monitor |
 | `upwatch list` (`ls`) | Show every monitor with its current status. `--json` for machine-readable output |
 | `upwatch history MONITOR` | Show recent checks. `--limit N` (max 100), `--json` |
@@ -162,7 +164,7 @@ upwatch list --json | jq -r '.[] | select(.status == "down") | .url'
 
 ## 🔍 How checks work
 
-Every active monitor is checked once per **interval** (default **5 minutes**). upwatch sends an HTTP `GET`, follows redirects, and records:
+Every active monitor is checked once per **interval** (default **5 minutes**; change it in the dashboard). Making it shorter takes effect right away: any site whose last check is older than the new interval is checked within seconds. upwatch sends an HTTP `GET`, follows redirects, and records:
 
 | Result | Status |
 |---|---|
@@ -182,7 +184,7 @@ Every active monitor is checked once per **interval** (default **5 minutes**). u
 
 | Setting | How to change it | Default |
 |---|---|---|
-| Check interval | `upwatch serve --interval 60` (seconds) | `300` (5 min) |
+| Check interval | The **Check every** dropdown in the dashboard, or `upwatch serve --interval 60` (seconds, 10 to 86400). Either way it's saved in the database | `300` (5 min) |
 | Timeout | `upwatch serve --timeout 5` (seconds) | `10` |
 | Dashboard port | `upwatch serve --port 9000` | `8321` |
 | Listen address | `upwatch serve --host 0.0.0.0` | `127.0.0.1` (this computer only) |
@@ -281,7 +283,8 @@ The dashboard is built on a small JSON API you can use too. Requests that change
 | `GET /api/monitors/{id}/checks?limit=100` | Check history, newest first |
 | `POST /api/monitors/{id}/pause` · `/resume` · `/check` | Pause, resume, or check right now |
 | `DELETE /api/monitors/{id}` | Remove a monitor and its history |
-| `GET /api/info` | Version, interval, timeout and database path |
+| `GET /api/info` | Version, interval (and its allowed range), timeout and database path |
+| `POST /api/settings` | Change the check interval: `{"interval": 600}` (seconds, 10 to 86400) |
 
 ```bash
 curl -X POST localhost:8321/api/monitors -H "X-Upwatch: 1" \
