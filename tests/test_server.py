@@ -2,6 +2,7 @@ import http.client
 import json
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 
@@ -54,6 +55,12 @@ class ServerTests(unittest.TestCase):
 
         status, listing = self.request("GET", "/api/monitors")
         self.assertEqual([m["name"] for m in listing], ["Ex"])
+
+        # Adding a monitor queues an immediate background check; let it land first.
+        deadline = time.time() + 5
+        while not self.store.history(mid) and time.time() < deadline:
+            time.sleep(0.02)
+        self.assertEqual(self.store.history(mid)[0].status, "up")
 
         self.store.record_check(mid, "down", 503, 30, "HTTP 503")
         status, one = self.request("GET", f"/api/monitors/{mid}")
