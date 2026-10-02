@@ -4,224 +4,331 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>upwatch</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%230ca30c'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2309090b'/%3E%3Cpath d='M2 9h3l2-5 2 8 2-3h3' fill='none' stroke='%2322c55e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root {
-    --page: #f9f9f7;
-    --surface: #fcfcfb;
-    --surface-2: #f2f1ed;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --axis: #c3c2b7;
-    --border: rgba(11, 11, 11, 0.10);
-    --accent: #2a78d6;
-    --series: #2a78d6;
-    --good: #0ca30c;
-    --good-text: #006300;
-    --critical: #d03b3b;
-    --warning: #fab219;
-    --warning-text: #8a5a00;
-    --unknown: #898781;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 16px rgba(0, 0, 0, .04);
-    --mono: ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace;
+    --page: #fafafa;
+    --surface: #ffffff;
+    --surface-2: #f4f4f5;
+    --hover: #f4f4f5;
+    --ink: #09090b;
+    --ink-2: #52525b;
+    --muted: #8a8a93;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --grid: #e4e4e7;
+    --axis: #d4d4d8;
+    --accent: #2563eb;
+    --series: #3b82f6;
+    --good: #16a34a;
+    --good-text: #15803d;
+    --critical: #dc2626;
+    --critical-text: #dc2626;
+    --critical-bg: rgba(220, 38, 38, .08);
+    --warning: #d97706;
+    --warning-text: #b45309;
+    --unknown: #a1a1aa;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --page: #0d0d0d;
-      --surface: #1a1a19;
-      --surface-2: #232321;
-      --ink: #ffffff;
-      --ink-2: #c3c2b7;
-      --muted: #898781;
-      --grid: #2c2c2a;
-      --axis: #383835;
-      --border: rgba(255, 255, 255, 0.10);
-      --accent: #3987e5;
-      --series: #3987e5;
-      --good-text: #0ca30c;
-      --critical: #e05555;
-      --warning-text: #fab219;
-      --shadow: none;
+      --page: #09090b;
+      --surface: #0f0f11;
+      --surface-2: #18181b;
+      --hover: #151518;
+      --ink: #ededef;
+      --ink-2: #a1a1aa;
+      --muted: #71717a;
+      --border: #222226;
+      --border-strong: #2e2e33;
+      --grid: #232327;
+      --axis: #34343a;
+      --accent: #3b82f6;
+      --series: #3b82f6;
+      --good: #22c55e;
+      --good-text: #4ade80;
+      --critical: #ef4444;
+      --critical-text: #f87171;
+      --critical-bg: rgba(239, 68, 68, .10);
+      --warning: #f59e0b;
+      --warning-text: #fbbf24;
+      --unknown: #52525b;
       color-scheme: dark;
     }
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
     background: var(--page);
     color: var(--ink);
-    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 13px/1.45 var(--sans);
     -webkit-font-smoothing: antialiased;
+    display: flex; flex-direction: column;
   }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 64px; }
-  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; letter-spacing: -.01em; }
-  .brand .pulse { width: 10px; height: 10px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent); }
-  .brand small { font: 12px var(--mono); color: var(--muted); font-weight: 400; }
-  .controls { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-  .meta { color: var(--muted); font-size: 12px; font-family: var(--mono); }
-  .interval { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; font-size: 13px; color: var(--ink-2); }
-  .interval select, .interval input {
-    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 5px 8px;
+  .mono, .num, code, kbd { font-family: var(--mono); }
+  .num { font-variant-numeric: tabular-nums; text-align: right; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* ---- top bar ---------------------------------------------------------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 20px;
+    height: 48px; padding: 0 16px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
   }
-  .interval select { cursor: pointer; padding-right: 4px; }
-  .interval input { width: 88px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; letter-spacing: -.01em; }
+  .brand svg { flex: none; }
+  .brand .ver { font: 11px var(--mono); color: var(--muted); font-weight: 400; padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; }
+  .counts { display: flex; align-items: center; gap: 2px; padding-left: 20px; border-left: 1px solid var(--border); height: 24px; }
+  .count { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 4px; font: 12px var(--mono); color: var(--ink-2); }
+  .count b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .count.down.alert { background: var(--critical-bg); color: var(--critical-text); }
+  .count.down.alert b { color: var(--critical-text); }
+
+  .interval { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+  .interval label { font-family: var(--mono); color: var(--muted); }
   .interval .custom { display: inline-flex; align-items: center; gap: 6px; }
   .interval .custom[hidden] { display: none; }
-  .interval .custom button { padding: 5px 10px; }
-  .interval select:focus-visible, .interval input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .saved { font-size: 12px; color: var(--good-text); min-width: 0; }
-  .saved.error { color: var(--critical); }
+  .interval input { width: 80px; }
+  .saved { font: 12px var(--mono); color: var(--good-text); }
+  .saved.error { color: var(--critical-text); }
   .saved:empty { display: none; }
 
-  .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
-  .tile .label { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: 12px; }
-  .tile .value { font-size: 26px; font-weight: 650; font-variant-numeric: tabular-nums; margin-top: 2px; }
-
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
-  form.add { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; gap: 8px; padding: 12px; margin-bottom: 16px; }
-  input {
-    width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--page); color: var(--ink); font: inherit;
+  /* ---- controls --------------------------------------------------------- */
+  input, select, button { font: inherit; color: var(--ink); }
+  input, select {
+    height: 30px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--border-strong);
+    background: var(--page); width: 100%;
   }
-  input:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input::placeholder { color: var(--muted); }
+  input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+  select { width: auto; cursor: pointer; padding-right: 6px; font: 12px var(--mono); height: 28px; background: var(--surface); }
   button {
-    font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--ink); padding: 7px 12px; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 30px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--border-strong);
+    background: var(--surface); cursor: pointer; white-space: nowrap; font-size: 13px;
   }
   button:hover { background: var(--surface-2); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 9px 16px; }
-  button.primary:hover { filter: brightness(1.08); }
-  button.danger { color: var(--critical); }
-  button.confirm { background: var(--critical); border-color: var(--critical); color: #fff; }
-  button:disabled { opacity: .55; cursor: default; }
-  .form-error { grid-column: 1 / -1; color: var(--critical); font-size: 13px; margin: 0; }
+  button.primary { background: var(--ink); border-color: var(--ink); color: var(--page); font-weight: 500; }
+  button.primary:hover { opacity: .88; background: var(--ink); }
+  button:disabled { opacity: .4; cursor: default; }
+  button:disabled:hover { background: transparent; }
+  kbd {
+    display: inline-block; min-width: 18px; padding: 0 4px; font-size: 11px; line-height: 16px; text-align: center;
+    color: var(--muted); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; background: var(--surface);
+  }
+
+  /* ---- main ------------------------------------------------------------- */
+  main { flex: 1; width: 100%; max-width: 1280px; margin: 0 auto; padding: 20px 16px 56px; }
+  .toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar h1 { margin: 0; font-size: 14px; font-weight: 600; display: flex; align-items: baseline; gap: 8px; }
+  .toolbar h1 span { font: 12px var(--mono); color: var(--muted); font-weight: 400; }
+  form.add { margin-left: auto; display: grid; grid-template-columns: 180px 340px auto; gap: 6px; align-items: center; }
+  form.add .url-field { position: relative; }
+  form.add .url-field input { font-family: var(--mono); font-size: 12px; padding-right: 32px; }
+  form.add .url-field kbd { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+  form.add .url-field input:focus + kbd { display: none; }
+  .form-error { grid-column: 1 / -1; color: var(--critical-text); font: 12px var(--mono); margin: 2px 0 0; text-align: right; }
   .form-error:empty { display: none; }
 
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .list-head, .row {
-    display: grid; align-items: center; gap: 12px;
-    grid-template-columns: 116px minmax(0, 1.6fr) 104px 84px 72px minmax(0, 1.1fr) 250px;
-    padding: 10px 14px;
+    display: grid; align-items: center; gap: 16px;
+    grid-template-columns: 92px minmax(0, 1.7fr) 84px 76px 64px minmax(140px, 1fr) 128px;
+    padding: 0 14px;
   }
-  .list-head { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+  .list-head {
+    height: 34px; background: var(--surface-2); border-bottom: 1px solid var(--border);
+    color: var(--muted); font: 11px var(--mono); text-transform: uppercase; letter-spacing: .04em;
+  }
+  .row { min-height: 52px; padding-top: 8px; padding-bottom: 8px; }
   .row + .row { border-top: 1px solid var(--border); }
-  .row.paused > :not(.actions):not(.status-cell) { opacity: .55; }
-  .num { font-variant-numeric: tabular-nums; text-align: right; }
-  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .url { display: block; color: var(--ink-2); font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
-  .url:hover { color: var(--accent); text-decoration: underline; }
-  .err { color: var(--critical); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .actions { display: flex; gap: 6px; justify-content: flex-end; }
-  .actions button { padding: 5px 9px; font-size: 13px; }
-  .empty { padding: 40px 16px; text-align: center; color: var(--ink-2); }
-  .empty code { font-family: var(--mono); background: var(--surface-2); padding: 2px 6px; border-radius: 4px; }
+  .row:hover { background: var(--hover); }
+  .row.paused > :not(.actions):not(.status-cell) { opacity: .5; }
+  .site { min-width: 0; }
+  .name {
+    display: block; max-width: 100%; height: auto; padding: 0; border: 0; background: none; border-radius: 3px;
+    font-weight: 500; font-size: 13px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .name:hover { background: none; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--muted); }
+  .url { display: block; color: var(--muted); font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+  .url:hover { color: var(--ink-2); text-decoration: underline; }
+  .err { color: var(--critical-text); font: 11.5px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .c-last, .c-resp, .c-up { font: 12px var(--mono); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .c-resp.slow, .c-up.warn { color: var(--warning-text); }
+  .c-up.bad { color: var(--critical-text); }
+  .actions { display: flex; gap: 2px; justify-content: flex-end; }
+  .actions button { height: 28px; min-width: 28px; padding: 0 6px; border-color: transparent; background: transparent; color: var(--ink-2); }
+  .actions button:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border); color: var(--ink); }
+  .actions button.danger:hover { color: var(--critical-text); }
+  .actions button.confirm, .actions button.confirm:hover { background: var(--critical); border-color: var(--critical); color: #fff; font-size: 12px; padding: 0 8px; }
 
-  .badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
-  .badge svg { flex: none; }
-  .badge.up { color: var(--good-text); }
-  .badge.down { color: var(--critical); }
-  .badge.unknown { color: var(--ink-2); }
-  .badge.paused { color: var(--warning-text); }
-  .sub { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 1px; }
+  .empty { padding: 48px 16px; text-align: center; color: var(--ink-2); }
+  .empty p { margin: 0 0 14px; }
+  .empty pre {
+    display: inline-block; margin: 0; padding: 10px 14px; text-align: left; font: 12px var(--mono);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--ink);
+  }
+  .empty pre span { color: var(--muted); user-select: none; }
 
-  .strip { display: flex; gap: 2px; align-items: stretch; height: 22px; }
-  .strip i { flex: 1 1 0; min-width: 3px; max-width: 8px; border-radius: 2px; background: var(--grid); }
+  .badge { display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--mono); text-transform: uppercase; letter-spacing: .03em; }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .badge.up { color: var(--good-text); } .badge.up .dot { background: var(--good); }
+  .badge.down { color: var(--critical-text); } .badge.down .dot { background: var(--critical); box-shadow: 0 0 0 3px var(--critical-bg); }
+  .badge.unknown { color: var(--ink-2); } .badge.unknown .dot { border: 1.5px dashed var(--muted); }
+  .badge.paused { color: var(--warning-text); } .badge.paused .dot { border: 2px solid var(--warning); }
+  .badge .sub { display: block; color: var(--muted); font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+  .strip { display: flex; gap: 1px; align-items: stretch; height: 20px; }
+  .strip i { flex: 1 1 0; min-width: 2px; max-width: 6px; border-radius: 1px; background: var(--grid); }
   .strip i.up { background: var(--good); }
   .strip i.down { background: var(--critical); }
+  .strip i:hover { opacity: .7; }
 
-  dialog {
-    width: min(920px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
-    border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--ink);
+  /* ---- status bar ------------------------------------------------------- */
+  .statusbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    display: flex; align-items: center; gap: 0; height: 26px; padding: 0 8px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden;
   }
-  dialog::backdrop { background: rgba(0, 0, 0, .45); }
-  .dlg-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
-  .dlg-head h2 { margin: 0; font-size: 17px; }
-  .dlg-head .close { margin-left: auto; }
-  .dlg-body { padding: 16px 18px 20px; overflow: auto; max-height: calc(100vh - 140px); }
-  .stats { display: flex; gap: 28px; flex-wrap: wrap; margin-bottom: 14px; }
-  .stats div { font-size: 12px; color: var(--ink-2); }
-  .stats b { display: block; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .chart-title { font-size: 12px; color: var(--ink-2); margin: 4px 0 6px; }
-  .chart { position: relative; }
+  .statusbar > * { flex: none; padding: 0 10px; border-right: 1px solid var(--border); }
+  .statusbar #db { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .conn::before { flex: none; }
+  .statusbar > :last-child { border-right: 0; margin-left: auto; }
+  .statusbar a { text-decoration: none; }
+  .statusbar a:hover { color: var(--ink); }
+  .conn { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+  .conn::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+  .conn.ok::before { background: var(--good); }
+  .conn.offline { color: var(--critical-text); }
+  .conn.offline::before { background: var(--critical); }
+
+  /* ---- history panel ---------------------------------------------------- */
+  dialog {
+    margin: 0 0 0 auto; width: min(780px, 100vw); height: 100%; max-height: 100%; max-width: 100vw; padding: 0;
+    border: 0; border-left: 1px solid var(--border); background: var(--surface); color: var(--ink);
+    display: none; flex-direction: column;
+  }
+  dialog[open] { display: flex; animation: slide .16s ease-out; }
+  @keyframes slide { from { transform: translateX(24px); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { dialog[open] { animation: none; } }
+  dialog::backdrop { background: rgba(0, 0, 0, .4); }
+  .dlg-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .dlg-head > div { min-width: 0; }
+  .dlg-head h2 { margin: 0; font-size: 14px; font-weight: 600; }
+  .dlg-head .close { margin-left: auto; height: 28px; padding: 0 8px; font: 12px var(--mono); color: var(--ink-2); }
+  .dlg-body { padding: 16px; overflow: auto; flex: 1; }
+  .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 20px; }
+  .stats > div { padding: 10px 12px; font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; min-width: 0; }
+  .stats > div + div { border-left: 1px solid var(--border); }
+  .stats b { display: block; margin-top: 4px; font-size: 15px; font-weight: 500; color: var(--ink); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+  .stats b .badge { font-size: 13px; }
+  .section-title { display: flex; align-items: center; gap: 16px; font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 8px; }
+  .legend { display: flex; gap: 12px; margin-left: auto; text-transform: none; letter-spacing: 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .chart { position: relative; margin-bottom: 20px; }
   .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
   .tooltip {
     position: absolute; pointer-events: none; z-index: 2; transform: translate(-50%, -100%);
-    background: var(--ink); color: var(--page); font-size: 12px; padding: 6px 8px; border-radius: 6px;
-    white-space: nowrap; box-shadow: 0 4px 12px rgba(0, 0, 0, .2);
+    background: var(--surface-2); color: var(--ink); border: 1px solid var(--border-strong);
+    font: 11px var(--mono); padding: 6px 8px; border-radius: 4px; white-space: nowrap; box-shadow: 0 4px 16px rgba(0, 0, 0, .18);
   }
   .tooltip[hidden] { display: none; }
-  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin: 8px 0 16px; }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); position: sticky; top: -16px; background: var(--surface); }
-  td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
-  td.mono { font-family: var(--mono); font-size: 12px; }
-  footer { margin-top: 20px; color: var(--muted); font-size: 12px; text-align: center; }
-  footer a { color: inherit; }
+  .table-wrap { border: 1px solid var(--border); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+  th {
+    text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 400;
+    padding: 7px 10px; border-bottom: 1px solid var(--border); position: sticky; top: -16px; background: var(--surface-2);
+  }
+  td { padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--ink-2); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--hover); }
+  td .badge { font-size: 11px; }
+  td .err { white-space: normal; }
 
+  @media (max-width: 1020px) {
+    form.add { margin-left: 0; width: 100%; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
+    .form-error { text-align: left; }
+  }
   @media (max-width: 860px) {
-    .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .topbar { height: auto; flex-wrap: wrap; gap: 8px 16px; padding: 10px 16px; }
+    .counts { order: 3; width: 100%; padding-left: 0; border-left: 0; margin-left: -8px; }
     form.add { grid-template-columns: minmax(0, 1fr); }
+    form.add .url-field kbd { display: none; }
     .list-head { display: none; }
-    .row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "site status" "meta meta" "strip strip" "actions actions"; row-gap: 8px; }
+    .row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "site status" "meta meta" "strip strip" "actions actions"; row-gap: 8px; padding: 12px 14px; }
     .row .site { grid-area: site; } .row .status-cell { grid-area: status; }
-    .row .strip { grid-area: strip; } .row .actions { grid-area: actions; justify-content: flex-start; flex-wrap: wrap; }
+    .row .strip { grid-area: strip; } .row .strip i { max-width: none; } .row .actions { grid-area: actions; justify-content: flex-start; flex-wrap: wrap; }
     .row .c-last, .row .c-resp, .row .c-up { display: none; }
-    .row .meta-line { grid-area: meta; display: block !important; color: var(--ink-2); font-size: 12px; }
-    .controls { margin-left: 0; width: 100%; align-items: flex-start; }
-    .interval { justify-content: flex-start; }
+    .row .meta-line { grid-area: meta; display: block !important; color: var(--ink-2); font: 12px var(--mono); }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .stats > div { border-top: 1px solid var(--border); }
+    .stats > div:nth-child(-n+2) { border-top: 0; }
+    .stats > div:nth-child(odd) { border-left: 0; }
+    .statusbar .hide-sm { display: none; }
   }
   .meta-line { display: none; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="brand"><span class="pulse" aria-hidden="true"></span>upwatch <small id="version"></small></div>
-    <div class="controls">
-      <form class="interval" id="interval-form" autocomplete="off" novalidate>
-        <label for="interval">Check every</label>
-        <select id="interval" disabled></select>
-        <span class="custom" id="custom" hidden>
-          <input id="custom-seconds" type="number" inputmode="numeric" step="1" aria-label="Custom interval in seconds">
-          <span>sec</span>
-          <button type="submit">Save</button>
-        </span>
-        <span class="saved" id="interval-msg" role="status"></span>
-      </form>
-      <div class="meta" id="meta">connecting…</div>
-    </div>
-  </header>
-
-  <section class="summary" aria-label="Summary">
-    <div class="tile"><div class="label" data-icon="up">Up</div><div class="value" id="n-up">–</div></div>
-    <div class="tile"><div class="label" data-icon="down">Down</div><div class="value" id="n-down">–</div></div>
-    <div class="tile"><div class="label" data-icon="unknown">Unknown</div><div class="value" id="n-unknown">–</div></div>
-    <div class="tile"><div class="label" data-icon="paused">Paused</div><div class="value" id="n-paused">–</div></div>
-  </section>
-
-  <form class="add card" id="add-form" autocomplete="off">
-    <input id="add-name" name="name" placeholder="Friendly name (optional)" aria-label="Friendly name" maxlength="100">
-    <input id="add-url" name="url" placeholder="https://example.com" aria-label="URL" required>
-    <button class="primary" type="submit">Add monitor</button>
-    <p class="form-error" id="add-error" role="alert"></p>
+<header class="topbar">
+  <div class="brand">
+    <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" rx="3" fill="var(--ink)"/><path d="M2 9h3l2-5 2 8 2-3h3" fill="none" stroke="var(--good)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    upwatch <span class="ver" id="version">–</span>
+  </div>
+  <div class="counts" role="group" aria-label="Summary">
+    <span class="count"><span class="badge up"><i class="dot"></i></span><b id="n-up">–</b> up</span>
+    <span class="count down" id="c-down"><span class="badge down"><i class="dot"></i></span><b id="n-down">–</b> down</span>
+    <span class="count"><span class="badge unknown"><i class="dot"></i></span><b id="n-unknown">–</b> unknown</span>
+    <span class="count"><span class="badge paused"><i class="dot"></i></span><b id="n-paused">–</b> paused</span>
+  </div>
+  <form class="interval" id="interval-form" autocomplete="off" novalidate>
+    <span class="saved" id="interval-msg" role="status"></span>
+    <label for="interval">interval</label>
+    <select id="interval" disabled></select>
+    <span class="custom" id="custom" hidden>
+      <input id="custom-seconds" type="number" inputmode="numeric" step="1" aria-label="Custom interval in seconds">
+      <span>sec</span>
+      <button type="submit">Save</button>
+    </span>
   </form>
+</header>
 
-  <section class="card" aria-label="Monitors">
+<main>
+  <div class="toolbar">
+    <h1>Monitors <span id="total"></span></h1>
+    <form class="add" id="add-form" autocomplete="off">
+      <input id="add-name" name="name" placeholder="Name (optional)" aria-label="Friendly name" maxlength="100">
+      <div class="url-field">
+        <input id="add-url" name="url" placeholder="https://example.com" aria-label="URL" required>
+        <kbd aria-hidden="true">/</kbd>
+      </div>
+      <button class="primary" type="submit">Add monitor</button>
+      <p class="form-error" id="add-error" role="alert"></p>
+    </form>
+  </div>
+
+  <section class="panel" aria-label="Monitors">
     <div class="list-head">
-      <span>Status</span><span>Site</span><span>Last check</span><span class="num">Response</span><span class="num">Uptime</span><span>Recent checks</span><span></span>
+      <span>Status</span><span>Monitor</span><span>Last check</span><span class="num">Latency</span><span class="num">Uptime</span><span>Last 30 checks</span><span></span>
     </div>
     <div id="rows"></div>
   </section>
+</main>
 
-  <footer>Status refreshes every few seconds · history keeps the latest <span id="keep">100</span> checks per site · <a href="https://github.com/jayspyroyale/upwatch" target="_blank" rel="noopener">upwatch on GitHub</a></footer>
-</div>
+<footer class="statusbar">
+  <span class="conn" id="conn">connecting</span>
+  <span id="meta">–</span>
+  <span class="hide-sm">history: <span id="keep">100</span> checks/monitor</span>
+  <span class="hide-sm" id="db" title=""></span>
+  <a href="https://github.com/jayspyroyale/upwatch" target="_blank" rel="noopener">github ↗</a>
+</footer>
 
 <dialog id="history" aria-labelledby="h-title">
   <div class="dlg-head">
@@ -229,34 +336,40 @@
       <h2 id="h-title"></h2>
       <a class="url" id="h-url" target="_blank" rel="noopener"></a>
     </div>
-    <button class="close" type="button" id="h-close" aria-label="Close">Close</button>
+    <button class="close" type="button" id="h-close" aria-label="Close">esc</button>
   </div>
   <div class="dlg-body">
     <div class="stats" id="h-stats"></div>
-    <div class="chart-title">Response time per check (oldest → newest)</div>
-    <div class="chart" id="h-chart"><div class="tooltip" hidden></div></div>
-    <div class="legend">
-      <span><i style="background:var(--series)"></i>Response time (Up)</span>
-      <span><i style="background:var(--critical)"></i>Down</span>
+    <div class="section-title">
+      <span>Response time</span>
+      <span class="legend">
+        <span><i style="background:var(--series)"></i>up</span>
+        <span><i style="background:var(--critical)"></i>down</span>
+      </span>
     </div>
-    <table>
-      <thead><tr><th>Checked at</th><th>Status</th><th>HTTP</th><th style="text-align:right">Response</th><th>Detail</th></tr></thead>
-      <tbody id="h-rows"></tbody>
-    </table>
+    <div class="chart" id="h-chart"><div class="tooltip" hidden></div></div>
+    <div class="section-title">Checks</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Checked at</th><th>Status</th><th>HTTP</th><th style="text-align:right">Latency</th><th>Detail</th></tr></thead>
+        <tbody id="h-rows"></tbody>
+      </table>
+    </div>
   </div>
 </dialog>
 
 <script>
 "use strict";
 const $ = (sel) => document.querySelector(sel);
+const svgIcon = (d) => `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICONS = {
-  up: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--good)"/><path d="M4.6 8.2l2.2 2.2 4.6-4.7" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  down: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--critical)"/><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
-  unknown: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="var(--unknown)" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>',
-  paused: '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--warning)"/><path d="M6.3 5.2v5.6M9.7 5.2v5.6" stroke="#3d2a00" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  history: svgIcon('<path d="M2.5 13.5h11M4.5 10.5v3M7 6.5v7M9.5 8.5v5M12 3.5v10"/>'),
+  check: svgIcon('<path d="M13.5 8a5.5 5.5 0 1 1-1.7-4M13.5 2.5v3h-3"/>'),
+  pause: svgIcon('<path d="M6 4v8M10 4v8"/>'),
+  resume: svgIcon('<path d="M5.5 3.5l7 4.5-7 4.5z"/>'),
+  remove: svgIcon('<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/>'),
 };
 const LABELS = { up: "Up", down: "Down", unknown: "Unknown", paused: "Paused" };
-document.querySelectorAll("[data-icon]").forEach((el) => el.insertAdjacentHTML("afterbegin", ICONS[el.dataset.icon]));
 
 let monitors = [];
 let info = null;
@@ -275,6 +388,8 @@ function ago(ts) {
 }
 const fmtTime = (ts) => new Date(ts * 1000).toLocaleString();
 const fmtMs = (v) => (v == null ? "–" : `${v.toLocaleString()} ms`);
+const fmtPct = (v) => (v == null ? "–" : `${v}%`);
+const pctClass = (v) => (v == null || v >= 99 ? "" : v >= 90 ? "warn" : "bad");
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -286,8 +401,14 @@ async function api(path, options = {}) {
   return data;
 }
 
+function setConn(ok) {
+  const conn = $("#conn");
+  conn.className = `conn ${ok ? "ok" : "offline"}`;
+  conn.textContent = ok ? "connected" : "offline";
+}
+
 function badge(state, sub) {
-  return `<span class="badge ${state}">${ICONS[state]}<span>${LABELS[state]}${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</span></span>`;
+  return `<span class="badge ${state}"><i class="dot"></i><span>${LABELS[state]}${sub ? `<span class="sub">${esc(sub)}</span>` : ""}</span></span>`;
 }
 
 function strip(recent) {
@@ -301,34 +422,37 @@ function render() {
   const counts = { up: 0, down: 0, unknown: 0, paused: 0 };
   monitors.forEach((m) => (m.paused ? counts.paused++ : counts[m.status]++));
   Object.entries(counts).forEach(([k, v]) => ($(`#n-${k}`).textContent = v));
+  $("#c-down").classList.toggle("alert", counts.down > 0);
+  $("#total").textContent = monitors.length ? String(monitors.length) : "";
   document.title = counts.down ? `(${counts.down} down) upwatch` : "upwatch";
 
   const rows = $("#rows");
   if (!monitors.length) {
-    rows.innerHTML = `<div class="empty">No monitors yet. Add a URL above, or from a terminal run<br><br><code>upwatch add https://example.com --name Example</code></div>`;
+    rows.innerHTML = `<div class="empty"><p>No monitors yet. Add a URL above, or from a terminal:</p><pre><span>$ </span>upwatch add https://example.com --name Example</pre></div>`;
     return;
   }
   rows.innerHTML = monitors.map((m) => {
     const last = m.last_check;
     const state = m.paused ? "paused" : m.status;
-    const sub = m.paused ? `last: ${LABELS[m.status]}` : last && last.status_code ? `HTTP ${last.status_code}` : "";
+    const sub = m.paused ? `last: ${LABELS[m.status].toLowerCase()}` : last && last.status_code ? `HTTP ${last.status_code}` : "";
+    const slow = last && last.response_ms != null && last.response_ms >= 1000 ? "slow" : "";
     return `<div class="row ${m.paused ? "paused" : ""}" data-id="${m.id}">
       <div class="status-cell">${badge(state, sub)}</div>
       <div class="site">
-        <div class="name" title="${esc(m.name)}">${esc(m.name)}</div>
+        <button type="button" class="name" data-act="history" title="Show history for ${esc(m.name)}">${esc(m.name)}</button>
         <a class="url" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer" title="${esc(m.url)}">${esc(m.url)}</a>
         ${last && last.error ? `<div class="err" title="${esc(last.error)}">${esc(last.error)}</div>` : ""}
       </div>
       <div class="c-last" title="${last ? esc(fmtTime(last.checked_at)) : ""}">${last ? ago(last.checked_at) : "never"}</div>
-      <div class="c-resp num">${last ? fmtMs(last.response_ms) : "–"}</div>
-      <div class="c-up num">${m.uptime_pct == null ? "–" : m.uptime_pct + "%"}</div>
+      <div class="c-resp num ${slow}">${last ? fmtMs(last.response_ms) : "–"}</div>
+      <div class="c-up num ${pctClass(m.uptime_pct)}">${fmtPct(m.uptime_pct)}</div>
       <div class="meta-line">${last ? ago(last.checked_at) : "never checked"} · ${last ? fmtMs(last.response_ms) : "–"} · ${m.uptime_pct == null ? "–" : m.uptime_pct + "% up"}</div>
       ${strip(m.recent)}
       <div class="actions">
-        <button type="button" data-act="history">History</button>
-        <button type="button" data-act="check" ${m.paused ? "disabled" : ""} title="Check now">Check</button>
-        <button type="button" data-act="${m.paused ? "resume" : "pause"}">${m.paused ? "Resume" : "Pause"}</button>
-        <button type="button" data-act="remove" class="danger">Remove</button>
+        <button type="button" data-act="history" title="History" aria-label="History">${ICONS.history}</button>
+        <button type="button" data-act="check" ${m.paused ? "disabled" : ""} title="Check now" aria-label="Check now">${ICONS.check}</button>
+        <button type="button" data-act="${m.paused ? "resume" : "pause"}" title="${m.paused ? "Resume" : "Pause"}" aria-label="${m.paused ? "Resume" : "Pause"}">${m.paused ? ICONS.resume : ICONS.pause}</button>
+        <button type="button" data-act="remove" class="danger" title="Remove" aria-label="Remove">${ICONS.remove}</button>
       </div>
     </div>`;
   }).join("");
@@ -347,9 +471,11 @@ async function refresh() {
       info = { ...latest, interval: info.interval };
     }
     render();
+    setConn(true);
     if (info) $("#meta").textContent = `timeout ${info.timeout}s · updated ${new Date().toLocaleTimeString()}`;
     if (openId != null && $("#history").open) loadHistory(openId, false);
   } catch (err) {
+    setConn(false);
     $("#meta").textContent = "Can't reach upwatch. Is `upwatch serve` still running?";
   }
 }
@@ -371,6 +497,14 @@ $("#add-form").addEventListener("submit", async (event) => {
   }
 });
 
+// "/" jumps to the URL field, like most developer tools.
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.target.closest("input, select, textarea") || $("#history").open) return;
+  event.preventDefault();
+  $("#add-url").focus();
+});
+
 const pendingRemove = new Map();
 $("#rows").addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-act]");
@@ -381,8 +515,9 @@ $("#rows").addEventListener("click", async (event) => {
     if (act === "history") return openHistory(id);
     if (act === "remove") {
       if (!pendingRemove.has(id)) {
-        button.textContent = "Confirm remove";
+        button.textContent = "Confirm";
         button.classList.add("confirm");
+        button.setAttribute("aria-label", "Confirm remove");
         pendingRemove.set(id, setTimeout(() => { pendingRemove.delete(id); render(); }, 4000));
         return;
       }
@@ -439,7 +574,7 @@ async function saveInterval(seconds) {
   try {
     info = await api("/api/settings", { method: "POST", body: JSON.stringify({ interval: seconds }) });
     renderInterval();
-    intervalMessage("Saved");
+    intervalMessage("saved");
     refresh();
   } catch (err) {
     select.disabled = false;
@@ -471,7 +606,7 @@ $("#custom-seconds").addEventListener("keydown", (event) => {
   if (event.key === "Escape") renderInterval();
 });
 
-// ---- history dialog -------------------------------------------------------
+// ---- history panel --------------------------------------------------------
 async function openHistory(id) {
   openId = id;
   history.replaceState(null, "", `#history-${id}`);
@@ -499,17 +634,17 @@ async function loadHistory(id, first) {
     const p95 = ups.length ? ups[Math.min(ups.length - 1, Math.floor(ups.length * 0.95))] : null;
     $("#h-stats").innerHTML = `
       <div>Status<b>${badge(state)}</b></div>
-      <div>Uptime (stored checks)<b>${monitor.uptime_pct == null ? "–" : monitor.uptime_pct + "%"}</b></div>
-      <div>Avg response<b>${fmtMs(monitor.avg_ms)}</b></div>
-      <div>p95 response<b>${fmtMs(p95)}</b></div>
-      <div>Checks stored<b>${checks.length} / ${info ? info.history_limit : 100}</b></div>`;
+      <div>Uptime<b>${fmtPct(monitor.uptime_pct)}</b></div>
+      <div>Avg<b>${fmtMs(monitor.avg_ms)}</b></div>
+      <div>p95<b>${fmtMs(p95)}</b></div>
+      <div>Checks<b>${checks.length}/${info ? info.history_limit : 100}</b></div>`;
     drawChart(checks.slice().reverse());
     $("#h-rows").innerHTML = checks.length ? checks.map((c) => `<tr>
         <td>${esc(fmtTime(c.checked_at))}</td>
         <td>${badge(c.status)}</td>
-        <td class="mono">${c.status_code ?? "–"}</td>
+        <td>${c.status_code ?? "–"}</td>
         <td class="num">${fmtMs(c.response_ms)}</td>
-        <td>${c.error ? `<span class="err" style="white-space:normal">${esc(c.error)}</span>` : ""}</td>
+        <td>${c.error ? `<span class="err">${esc(c.error)}</span>` : ""}</td>
       </tr>`).join("") : `<tr><td colspan="5" class="empty">No checks yet — the first one runs a few seconds after you add a site.</td></tr>`;
   } catch (err) {
     if (first) $("#h-stats").textContent = err.message;
@@ -527,7 +662,7 @@ function drawChart(checks) {
   const host = $("#h-chart");
   const tip = host.querySelector(".tooltip");
   host.querySelectorAll("svg").forEach((s) => s.remove());
-  const W = 860, H = 200, L = 52, R = 8, T = 10, B = 22;
+  const W = 748, H = 180, L = 56, R = 4, T = 8, B = 22;
   const plotW = W - L - R, plotH = H - T - B;
   const n = Math.max(checks.length, 1);
   const max = niceMax(Math.max(0, ...checks.map((c) => (c.status === "up" ? c.response_ms || 0 : 0))));
@@ -535,29 +670,30 @@ function drawChart(checks) {
   const gap = slot > 6 ? 2 : 1;
   const barW = Math.max(1.5, slot - gap);
   const y = (v) => T + plotH - (v / max) * plotH;
+  const text = 'font-size="10.5" style="font-family:var(--mono)" fill="var(--muted)"';
   let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Response time for the last ${checks.length} checks. Full data in the table below.">`;
   for (let i = 0; i <= 4; i++) {
     const v = (max / 4) * i, yy = y(v);
-    svg += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${i === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1"/>`;
-    svg += `<text x="${L - 8}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${Math.round(v).toLocaleString()} ms</text>`;
+    svg += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${i === 0 ? "var(--axis)" : "var(--grid)"}" stroke-width="1" ${i === 0 ? "" : 'stroke-dasharray="2 3"'}/>`;
+    svg += `<text x="${L - 8}" y="${yy + 3.5}" text-anchor="end" ${text}>${Math.round(v).toLocaleString()}ms</text>`;
   }
   checks.forEach((c, i) => {
     const x = L + i * slot + gap / 2;
     if (c.status === "up") {
       const h = Math.max(2, plotH - (y(c.response_ms || 0) - T));
-      const top = T + plotH - h, r = Math.min(4, barW / 2, h);
+      const top = T + plotH - h, r = Math.min(2, barW / 2, h);
       svg += `<path d="M${x},${T + plotH} V${top + r} Q${x},${top} ${x + r},${top} H${x + barW - r} Q${x + barW},${top} ${x + barW},${top + r} V${T + plotH} Z" fill="var(--series)"/>`;
     } else {
-      svg += `<rect x="${x}" y="${T}" width="${barW}" height="${plotH}" fill="var(--critical)" opacity=".14"/>`;
-      svg += `<rect x="${x}" y="${T + plotH - 6}" width="${barW}" height="6" rx="1.5" fill="var(--critical)"/>`;
+      svg += `<rect x="${x}" y="${T}" width="${barW}" height="${plotH}" fill="var(--critical)" opacity=".12"/>`;
+      svg += `<rect x="${x}" y="${T + plotH - 5}" width="${barW}" height="5" rx="1" fill="var(--critical)"/>`;
     }
     svg += `<rect class="hit" data-i="${i}" x="${L + i * slot}" y="${T}" width="${slot}" height="${plotH}" fill="transparent"/>`;
   });
   if (checks.length) {
-    svg += `<text x="${L}" y="${H - 4}" font-size="11" fill="var(--muted)">${esc(new Date(checks[0].checked_at * 1000).toLocaleTimeString())}</text>`;
-    svg += `<text x="${L + (checks.length - 1) * slot + slot}" y="${H - 4}" font-size="11" text-anchor="end" fill="var(--muted)">${esc(new Date(checks[checks.length - 1].checked_at * 1000).toLocaleTimeString())}</text>`;
+    svg += `<text x="${L}" y="${H - 4}" ${text}>${esc(new Date(checks[0].checked_at * 1000).toLocaleTimeString())}</text>`;
+    svg += `<text x="${L + (checks.length - 1) * slot + slot}" y="${H - 4}" text-anchor="end" ${text}>${esc(new Date(checks[checks.length - 1].checked_at * 1000).toLocaleTimeString())}</text>`;
   } else {
-    svg += `<text x="${L + plotW / 2}" y="${T + plotH / 2}" text-anchor="middle" font-size="13" fill="var(--muted)">No checks yet</text>`;
+    svg += `<text x="${L + plotW / 2}" y="${T + plotH / 2}" text-anchor="middle" font-size="12" style="font-family:var(--mono)" fill="var(--muted)">no checks yet</text>`;
   }
   svg += "</svg>";
   host.insertAdjacentHTML("afterbegin", svg);
@@ -567,7 +703,7 @@ function drawChart(checks) {
     const hit = e.target.closest(".hit");
     if (!hit) { tip.hidden = true; return; }
     const c = checks[Number(hit.dataset.i)];
-    tip.innerHTML = `<b>${c.status === "up" ? "Up" : "Down"}</b> · ${c.status === "up" ? fmtMs(c.response_ms) : esc(c.error || "")}<br>${esc(fmtTime(c.checked_at))}`;
+    tip.innerHTML = `<b>${c.status === "up" ? "UP" : "DOWN"}</b> ${c.status === "up" ? fmtMs(c.response_ms) : esc(c.error || "")}<br>${esc(fmtTime(c.checked_at))}`;
     const box = host.getBoundingClientRect();
     tip.style.left = `${Math.min(Math.max(e.clientX - box.left, 80), box.width - 80)}px`;
     tip.style.top = `${e.clientY - box.top - 10}px`;
@@ -581,6 +717,8 @@ function drawChart(checks) {
     info = await api("/api/info");
     $("#version").textContent = `v${info.version}`;
     $("#keep").textContent = info.history_limit;
+    $("#db").textContent = info.db_path;
+    $("#db").title = info.db_path;
     renderInterval();
   } catch (_) { /* refresh() reports connection problems */ }
   await refresh();

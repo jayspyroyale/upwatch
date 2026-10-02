@@ -66,7 +66,7 @@ Your browser opens **http://localhost:8321**. Leave the terminal window open; th
 
 **3. Add your sites**
 
-Type a name and a URL into the dashboard and press **Add monitor**. The first check runs within a few seconds, then every 5 minutes after that. Want it more or less often? Use the **Check every** dropdown at the top right.
+Type a name and a URL into the dashboard and press **Add monitor**. The first check runs within a few seconds, then every 5 minutes after that. Want it more or less often? Use the **interval** dropdown at the top right.
 
 That's it. 🎉 Press `Ctrl+C` in the terminal to stop. Your monitors and history are saved, and they'll pick up where they left off next time you run `upwatch serve`.
 
@@ -96,18 +96,18 @@ python -m upwatch serve --open
 
 | What you see | What it means |
 |---|---|
-| **Summary tiles** | How many sites are Up, Down, Unknown (not checked yet) or Paused |
-| **Status** | ✅ **Up**, ❌ **Down**, ◌ **Unknown**, ⏸ **Paused**, always with an icon *and* a label, plus the HTTP code |
+| **Top bar counts** | How many sites are Up, Down, Unknown (not checked yet) or Paused; the Down count turns red when anything is down |
+| **Status** | **UP**, **DOWN**, **UNKNOWN** or **PAUSED**, always with a colored marker *and* a label, plus the HTTP code |
 | **Last check** | How long ago the latest check ran (hover for the exact time) |
-| **Response** | How long the latest check took, in milliseconds |
-| **Uptime** | Share of the stored checks (up to 100) that were Up |
-| **Recent checks** | The last 30 checks, oldest → newest; hover any bar for details |
+| **Latency** | How long the latest check took, in milliseconds (amber at 1 s or more) |
+| **Uptime** | Share of the stored checks (up to 100) that were Up (amber below 99%, red below 90%) |
+| **Last 30 checks** | The last 30 checks, oldest → newest; hover any bar for details |
 
-**Check every** (top right) sets how often sites are checked: 1 minute up to 24 hours, or **Custom…** for any number of seconds from 10 to 86,400. The change applies immediately and is remembered next time you start upwatch.
+**interval** (top right) sets how often sites are checked: 1 minute up to 24 hours, or **Custom…** for any number of seconds from 10 to 86,400. The change applies immediately and is remembered next time you start upwatch.
 
-Each row has buttons to see **History**, **Check** right now, **Pause**/**Resume**, and **Remove** (click twice to confirm). The page refreshes itself every few seconds and follows your system's light/dark theme.
+Each row has icon buttons to see **History**, **Check** right now, **Pause**/**Resume**, and **Remove** (click twice to confirm); clicking a monitor's name also opens its history. Press `/` to jump to the URL field. The status bar at the bottom shows the connection state, the last refresh and which database file is in use. The page refreshes itself every few seconds and follows your system's light/dark theme.
 
-**History** opens a response-time chart and a table of the last 100 checks with the HTTP code and the reason for any failure. You can link straight to it: `http://localhost:8321/#history-3`.
+**History** slides in a panel with a response-time chart and a table of the last 100 checks with the HTTP code and the reason for any failure. You can link straight to it: `http://localhost:8321/#history-3`.
 
 <div align="center">
 <img src="docs/history.png" alt="History view for one site: status, uptime, average and p95 response time, a bar chart of response times and a table of checks" width="80%">
@@ -184,7 +184,7 @@ Every active monitor is checked once per **interval** (default **5 minutes**; ch
 
 | Setting | How to change it | Default |
 |---|---|---|
-| Check interval | The **Check every** dropdown in the dashboard, or `upwatch serve --interval 60` (seconds, 10 to 86400). Either way it's saved in the database | `300` (5 min) |
+| Check interval | The **interval** dropdown in the dashboard, or `upwatch serve --interval 60` (seconds, 10 to 86400). Either way it's saved in the database | `300` (5 min) |
 | Timeout | `upwatch serve --timeout 5` (seconds) | `10` |
 | Dashboard port | `upwatch serve --port 9000` | `8321` |
 | Listen address | `upwatch serve --host 0.0.0.0` | `127.0.0.1` (this computer only) |
